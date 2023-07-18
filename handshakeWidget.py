@@ -7,10 +7,10 @@ class HandshakeWidget(QWidget):
         self.setWindowTitle("4 Way Handshake Simulator")
 
         btnRegularHandshake = QPushButton("Regular Handshake Protocol")
-        #btnRegularHandshake.clicked.connect(self.simulateRegularHandshake)
+        btnRegularHandshake.clicked.connect(self.simulateRegularHandshake)
 
         btnModifiedHandshake = QPushButton("Modified Handshake Protocol")
-        #btnModifiedHandshake.clicked.connect(self.simulateModifiedHandshake)
+        btnModifiedHandshake.clicked.connect(self.simulateModifiedHandshake)
 
         #Horizontal arrangement
         widgetLayout = QHBoxLayout()
@@ -18,4 +18,12 @@ class HandshakeWidget(QWidget):
         widgetLayout.addWidget(btnModifiedHandshake)
 
         self.setLayout(widgetLayout)
+    
+    # slot for Regular Handshake Button
+    def simulateRegularHandshake(self):
+        print("Begin Regular Handshake Protocol Simulation")
+
+    # slot for Modified Handshake Button
+    def simulateModifiedHandshake(self):
+        print("Begin Modified Handshake Protocol Simulation")
         
