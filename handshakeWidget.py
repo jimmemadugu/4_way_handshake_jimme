@@ -13,10 +13,10 @@ class HandshakeWidget(QWidget):
         btnModifiedHandshake.clicked.connect(self.simulateModifiedHandshake)
 
         btnRegularHandshakeBatch = QPushButton("Regular Handshake Protocol Batch")
-        #btnRegularHandshakeBatch.clicked.connect(self.simulateRegularHandshakeBatch)
+        btnRegularHandshakeBatch.clicked.connect(self.simulateRegularHandshakeBatch)
 
         btnModifiedHandshakeBatch = QPushButton("Modified Handshake Protocol Batch")
-        #btnModifiedHandshakeBatch.clicked.connect(self.simulateModifiedHandshakeBatch)
+        btnModifiedHandshakeBatch.clicked.connect(self.simulateModifiedHandshakeBatch)
 
         #Horizontal arrangement for btnRegularHandshake and btnModifiedHandshake buttons
         # widgetLayout = QHBoxLayout()
@@ -43,4 +43,12 @@ class HandshakeWidget(QWidget):
     # slot for Modified Handshake Button
     def simulateModifiedHandshake(self):
         print("Begin Modified Handshake Protocol Simulation")
+
+    # slot for Regular Handshake Batch Button
+    def simulateRegularHandshakeBatch(self):
+        print("Begin Batch Regular Handshake Protocol Simulation")
+
+    # slot for Modified Handshake Batch Button
+    def simulateModifiedHandshakeBatch(self):
+        print("Begin Batch Modified Handshake Protocol Simulation")
         
