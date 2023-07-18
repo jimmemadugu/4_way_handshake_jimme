@@ -12,12 +12,29 @@ class HandshakeWidget(QWidget):
         btnModifiedHandshake = QPushButton("Modified Handshake Protocol")
         btnModifiedHandshake.clicked.connect(self.simulateModifiedHandshake)
 
-        #Horizontal arrangement
-        widgetLayout = QHBoxLayout()
-        widgetLayout.addWidget(btnRegularHandshake)
-        widgetLayout.addWidget(btnModifiedHandshake)
+        btnRegularHandshakeBatch = QPushButton("Regular Handshake Protocol Batch")
+        #btnRegularHandshakeBatch.clicked.connect(self.simulateRegularHandshakeBatch)
 
-        self.setLayout(widgetLayout)
+        btnModifiedHandshakeBatch = QPushButton("Modified Handshake Protocol Batch")
+        #btnModifiedHandshakeBatch.clicked.connect(self.simulateModifiedHandshakeBatch)
+
+        #Horizontal arrangement for btnRegularHandshake and btnModifiedHandshake buttons
+        # widgetLayout = QHBoxLayout()
+        # widgetLayout.addWidget(btnRegularHandshake)
+        # widgetLayout.addWidget(btnModifiedHandshake)
+
+        # #Horizontal arrangement for simulateRegularHandshakeBatch and simulateModifiedHandshakeBatch buttons
+        # widgetLayout2 = QHBoxLayout()
+        # widgetLayout2.addWidget(btnRegularHandshakeBatch)
+        # widgetLayout2.addWidget(btnModifiedHandshakeBatch)
+
+        widgetVLayout = QVBoxLayout()
+        widgetVLayout.addWidget(btnRegularHandshake)
+        widgetVLayout.addWidget(btnModifiedHandshake)
+        widgetVLayout.addWidget(btnRegularHandshakeBatch)
+        widgetVLayout.addWidget(btnModifiedHandshakeBatch)
+
+        self.setLayout(widgetVLayout)
     
     # slot for Regular Handshake Button
     def simulateRegularHandshake(self):
