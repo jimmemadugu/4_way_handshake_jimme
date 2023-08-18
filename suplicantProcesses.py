@@ -1,11 +1,26 @@
-import os
-# import sys
+import sys
 # import hmac
+import asyncio
 import hashlib
+import os
+import pickle
+import select
+import socket
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QRunnable, Slot
 
-class SuplicantProcesses:
-    def __init__(self):
-        print("started new supplicant object processes")
+import time
+
+# Constants for Sockect Connection
+HOST = "127.0.0.1"
+PORT = 8080
+
+class SuplicantProcesses(QRunnable):
+    def __init__(self, textBrowser):
+        super(SuplicantProcesses, self).__init__()
+        self.textBrowser = textBrowser
+        print("created new supplicant object processes")
+        self.textBrowser.append("created new supplicant object processes")
         self.initializeParameters()
     
     def initializeParameters(self):
@@ -41,9 +56,148 @@ class SuplicantProcesses:
         self.ssid = "example_network"
         return hashlib.pbkdf2_hmac('sha1', self.password.encode(), self.ssid.encode(), 4096, 32)
     
-    # def runSupplicantProcesses(self, is_running):
-    #     self.server_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    #     self.server_socket.bind((socket.gethostname(),8080))
-    #     self.server_socket.listen(5)
-    #     self.sockets_list = [self.server_socket]
-    #     "Client started. Waiting for connections..."
+    async def handle_suplicant_communication(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        data = None
+
+        while data != b"quit":
+            data = await reader.read(1024)
+            msg = data.decode()
+            addr, port = writer.get_extra_info("peername")
+            print(f"Message from {addr}:{port}: {msg!r}")
+            self.textBrowser.append(f"Message from {addr}:{port}: {msg!r}")
+
+            writer.write(data)
+            await writer.drain()
+        
+        print("clossing server")
+        self.textBrowser.append("clossing server")
+        writer.close()
+        await writer.wait_closed()
+        print("clossed server")
+        self.textBrowser.append("clossed server")
+
+        #raise SystemExit
+        raise KeyboardInterrupt 
+        #raise Exception('Closing server Exception')
+
+    async def run_server(self) -> None:
+        try:
+            print("start server")
+            self.textBrowser.append("start server")
+            server = await asyncio.start_server(self.handle_suplicant_communication, HOST, PORT)
+            print("***start server***")
+            self.textBrowser.append("***start server***")
+            async with server:
+                await server.serve_forever()
+                print("end server")
+                self.textBrowser.append("end server")
+            
+            print("***end of server operation***")
+            self.textBrowser.append("***end of server operation***")
+        except Exception as e:
+            print("Exception was raised")
+            print("Exited System")
+            print(f"An exception occurred: {str(e)}")
+
+    @Slot()
+    def run(self):
+        print("beginning of supplicant program")
+        self.textBrowser.append("beginning of supplicant program")
+
+        asyncio.run(self.run_server())
+        # time.sleep(10)
+        print("end of supplicant program")
+        self.textBrowser.append("end of supplicant program")
+
+
+    # Socket functions
+    def runSupplicantProcesses(self):
+        self.server_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.server_socket.bind((socket.gethostname(),PORT))
+        self.server_socket.listen(5)
+        self.sockets_list = [self.server_socket]
+        print("Supplicant has started")
+        # textBrowser.append("Supplicant has started\n")
+
+        is_running = True
+        while is_running:
+            print("Supplicant is waiting for authenticator...")
+            # textBrowser.append("Supplicant is waiting for authenticator...\n")
+            self.read_sockets, _, _ = select.select(self.sockets_list, [], [])
+
+            for self.sock in self.read_sockets:
+                # New connection received
+                if self.sock == self.server_socket:
+                    self.client_socket, self.client_address = self.server_socket.accept()
+                    self.sockets_list.append(self.client_socket)
+                    print(f"New connection from {self.client_address}")
+                    # textBrowser.append(f"New connection from {self.client_address}\n")        
+                        
+                # Existing client sending a message
+                else:
+                    self.data = self.sock.recv(1024)
+                    if self.data:
+                        self.dic1 = pickle.loads(self.data)
+                        self.apnonce = self.dic1.get('apnonce')
+                        self.apmac = self.dic1.get('apmac')
+                        self.channel = self.dic1.get('channelinfo')
+                        self.beta = self.dic1.get('β')
+                        self.ptk = (self.spNonce().hex()+self.clientMacAddress()+self.apmac.hex()+self.apnonce.hex()+self.generate_pmk().hex())
+                        self.PTK = self.ptk[0:96]
+
+                        print("Supplicant Pairwise Transient key (PTK):"+self.PTK)
+                        print('Key Confirmation Key (KCK):'+self.PTK[0:32])
+                        print('Key Encryption Key (KEK):'+self.PTK[32:64])
+                        print('Temporal Key (TK):'+self.PTK[64:96])
+                        print(f"Received data from {self.sock.getpeername()}: {self.dic1}")
+
+                        # textBrowser.append("Supplicant Pairwise Transient key (PTK):"+self.PTK + '\n')
+                        # textBrowser.append('Key Confirmation Key (KCK):'+self.PTK[0:32] + '\n')
+                        # textBrowser.append('Key Encryption Key (KEK):'+self.PTK[32:64] + '\n')
+                        # textBrowser.append('Temporal Key (TK):'+self.PTK[64:96] + '\n')
+                        # textBrowser.append(f"Received data from {self.sock.getpeername()}: {self.dic1}\n")
+                        
+                        self.dic2 = {'spnonce':os.urandom(32),'smac':b'\x77\x88\x99\xaa\xbb\xcc','channelinfo':1}
+                        self.message2 = pickle.dumps(self.dic2)
+                        self.sock.send(self.message2)
+                        print('message2 sent sucessfully')
+                        # textBrowser.append("message2 sent sucessfully\n")
+                        
+                        if ((self.beta == True) & (self.channel == 1)):
+                            self.bytedic4 = self.sock.recv(1024)
+                            self.dic5 = pickle.loads(self.bytedic4)
+                            self.GTK = self.dic5.get('gtk')
+                            print('Install PTK and GTK')
+                            print('message3 received')
+                            print('Group Temporal key is:'+self.GTK[0:32].hex())
+                            print(str(self.beta))
+
+                            # textBrowser.append('Install PTK and GTK\n')
+                            # textBrowser.append('message3 received\n')
+                            # textBrowser.append('Group Temporal key is:'+self.GTK[0:32].hex() + '\n')
+                            # textBrowser.append(str(self.beta) + '\n')
+                        else:
+                            self.msg = 'message discarded, use the appropriate channel information'
+                            self.sock.send(self.msg.encode())
+
+                        self.beta = False
+                        self.message4 = 'Acknowledge reception of message3, PTK and GTK successfully installed by the supplicant'
+                        self.sock.send(self.message4.encode())
+
+                        print('Four way handshake completed')
+                        print(str(self.beta))
+
+                        # textBrowser.append('Four way handshake completed\n')
+                        # textBrowser.append(str(self.beta) + '\n')
+                    else:
+                        # Client disconnected
+                        print(f"Client {self.sock.getpeername()} disconnected")
+
+                        # textBrowser.append(f"Client {self.sock.getpeername()} disconnected\n")
+                        self.sockets_list.remove(self.sock)
+                        self.sock.close()
+                        # textBrowser.append("closed supplicant socket\n")
+                        is_running = False
+
+
+
