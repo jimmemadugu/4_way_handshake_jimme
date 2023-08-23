@@ -31,6 +31,16 @@ class SuplicantProcesses(QRunnable):
         self.pmk=self.generate_pmk()
 
     def returnParametersString(self):
+        self.textBrowser.append("supplicants parameters...")
+        # time.sleep(2)
+        self.textBrowser.append("SPs Nonce="+str(self.spnonce.hex()))
+        # time.sleep(1)
+        self.textBrowser.append("supplicants Mac address="+self.smac)
+        # time.sleep(3)
+        self.textBrowser.append("APs Mac address="+self.amac)
+        # time.sleep(1)
+        self.textBrowser.append("supplicants pmk="+str(self.pmk.hex()))
+
         return  (
             "supplicants parameters..." + "\n"
             "SPs Nonce="+str(self.spnonce.hex()) + "\n"
@@ -60,11 +70,73 @@ class SuplicantProcesses(QRunnable):
         data = None
 
         while data != b"quit":
-            data = await reader.read(1024)
-            msg = data.decode()
-            addr, port = writer.get_extra_info("peername")
-            print(f"Message from {addr}:{port}: {msg!r}")
-            self.textBrowser.append(f"Message from {addr}:{port}: {msg!r}")
+
+            try:
+                # Receive first message from Authenticator          
+                data = await reader.read(1024)
+                self.dic1 = pickle.loads(data)
+                print("msg ::  ")
+                print(self.dic1)
+                self.apnonce = self.dic1.get('apnonce')
+                self.apmac=self.dic1.get('apmac')
+                self.channel=self.dic1.get('channelinfo')
+                self.beta=self.dic1.get('β')
+                self.ptk=(self.spNonce().hex()+self.clientMacAddress()+self.apmac.hex()+self.apnonce.hex()+self.generate_pmk().hex())
+                self.PTK=self.ptk[0:96]
+
+                print("Supplicant Pairwise Transient key (PTK):"+self.PTK)
+                print('Key Confirmation Key (KCK):'+self.PTK[0:32])
+                print('Key Encryption Key (KEK):'+self.PTK[32:64])
+                print('Temporal Key (TK):'+self.PTK[64:96])
+                
+                addr, port = writer.get_extra_info("peername")
+                print(f"Message from {addr}:{port}: {self.dic1}")
+                self.textBrowser.append(f"Message from {addr}:{port}: {self.dic1}")
+
+                # Send second message to Authenticator
+                # self.dic2 = {'spnonce':os.urandom(32),'smac':b'\x77\x88\x99\xaa\xbb\xcc','channelinfo':1}
+                # self.message2 = pickle.dumps(self.dic2)
+                # # self.sock.send(self.message2)
+                # writer.write(self.message2)
+                # await writer.drain()
+
+                # print('message 2 sent sucessfully')
+
+                # if ((self.beta == True) & (self.channel == 1)):
+                #     # self.bytedic4=self.sock.recv(1024)
+                #     self.bytedic4 = await reader.read(1024)
+
+                #     self.dic5 = pickle.loads(self.bytedic4)
+                #     self.GTK = self.dic5.get('gtk')
+                #     print('Install PTK and GTK')
+                #     print('message3 received')
+                #     print('Group Temporal key is:'+self.GTK[0:32].hex())
+                #     print(str(self.beta))
+                # else:
+                #     self.msg='message discarded, use the appropriate channel information'
+                #     # self.sock.send(self.msg.encode())
+                #     writer.write(self.msg.encode())
+                #     await writer.drain()
+
+                # self.beta = False
+                # self.message4='Acknowledge reception of message3, PTK and GTK successfully installed by the supplicant'
+                # # self.sock.send(self.message4.encode())
+                # writer.write(self.message4.encode())
+                # await writer.drain()
+                # print('Four way handshake completed')
+                # print(str(self.beta))
+
+            except Exception as e:
+                print("Exception was raised")
+                print("Exited System")
+                print(f"An exception occurred: {str(e)}")
+            
+            
+            # msg = data.decode()
+
+            # addr, port = writer.get_extra_info("peername")
+            # print(f"Message from {addr}:{port}: {msg!r}")
+            # self.textBrowser.append(f"Message from {addr}:{port}: {msg!r}")
 
             writer.write(data)
             await writer.drain()
