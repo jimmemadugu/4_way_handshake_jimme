@@ -72,59 +72,89 @@ class SuplicantProcesses(QRunnable):
         while data != b"quit":
 
             try:
-                # Receive first message from Authenticator          
+                # Receive messages from Authenticator          
                 data = await reader.read(1024)
                 self.dic1 = pickle.loads(data)
                 print("msg ::  ")
                 print(self.dic1)
-                self.apnonce = self.dic1.get('apnonce')
-                self.apmac=self.dic1.get('apmac')
-                self.channel=self.dic1.get('channelinfo')
-                self.beta=self.dic1.get('β')
-                self.ptk=(self.spNonce().hex()+self.clientMacAddress()+self.apmac.hex()+self.apnonce.hex()+self.generate_pmk().hex())
-                self.PTK=self.ptk[0:96]
-
-                print("Supplicant Pairwise Transient key (PTK):"+self.PTK)
-                print('Key Confirmation Key (KCK):'+self.PTK[0:32])
-                print('Key Encryption Key (KEK):'+self.PTK[32:64])
-                print('Temporal Key (TK):'+self.PTK[64:96])
-                
                 addr, port = writer.get_extra_info("peername")
-                print(f"Message from {addr}:{port}: {self.dic1}")
-                self.textBrowser.append(f"Message from {addr}:{port}: {self.dic1}")
+                print(f"Message from device with address {addr}:{port}")
+                self.textBrowser.append(f"Message from device with address {addr}:{port}")
 
-                # Send second message to Authenticator
-                # self.dic2 = {'spnonce':os.urandom(32),'smac':b'\x77\x88\x99\xaa\xbb\xcc','channelinfo':1}
-                # self.message2 = pickle.dumps(self.dic2)
-                # # self.sock.send(self.message2)
-                # writer.write(self.message2)
-                # await writer.drain()
+                # Receive message 1 from Authenticator
+                if (self.dic1.get('msg_no') == 1):
+                    self.apnonce = self.dic1.get('apnonce')
+                    self.apmac=self.dic1.get('apmac')
+                    self.channel=self.dic1.get('channelinfo')
+                    self.beta=self.dic1.get('β')
+                    self.ptk=(self.spNonce().hex()+self.clientMacAddress()+self.apmac.hex()+self.apnonce.hex()+self.generate_pmk().hex())
+                    self.PTK=self.ptk[0:96]
 
-                # print('message 2 sent sucessfully')
+                    print("Supplicant Pairwise Transient key (PTK):"+self.PTK)
+                    print('Key Confirmation Key (KCK):'+self.PTK[0:32])
+                    print('Key Encryption Key (KEK):'+self.PTK[32:64])
+                    print('Temporal Key (TK):'+self.PTK[64:96])
+                    self.textBrowser.append(f"Supplicant Pairwise Transient key (PTK): {self.PTK}")
+                    self.textBrowser.append(f"Key Confirmation Key (KCK): {self.PTK[0:32]}")
+                    self.textBrowser.append(f"Key Encryption Key (KEK): {self.PTK[32:64]}")
+                    self.textBrowser.append(f"Temporal Key (TK): {self.PTK[64:96]}")
+                    
+                    await asyncio.sleep(1)
+                    # Send second message to Authenticator
+                    self.dic2 = {'msg_no':2,'spnonce':os.urandom(32),'smac':b'\x77\x88\x99\xaa\xbb\xcc','channelinfo':1}
+                    self.message2 = pickle.dumps(self.dic2)
+                    # # self.sock.send(self.message2)
+                    print(self.message2)
+                    writer.write(self.message2)
+                    await writer.drain()
+                    self.textBrowser.append("message 2 sent sucessfully")
+                    print('message 2 sent sucessfully')
 
-                # if ((self.beta == True) & (self.channel == 1)):
-                #     # self.bytedic4=self.sock.recv(1024)
-                #     self.bytedic4 = await reader.read(1024)
+                    await asyncio.sleep(1)
+                elif (self.dic1.get('msg_no') == 3):
+                    print("Received message three")
+                    print(self.dic1)
+                    # await asyncio.sleep(2)
+                    print(f"beta: {self.beta}")
+                    print(f"Channel: {self.channel}")
 
-                #     self.dic5 = pickle.loads(self.bytedic4)
-                #     self.GTK = self.dic5.get('gtk')
-                #     print('Install PTK and GTK')
-                #     print('message3 received')
-                #     print('Group Temporal key is:'+self.GTK[0:32].hex())
-                #     print(str(self.beta))
-                # else:
-                #     self.msg='message discarded, use the appropriate channel information'
-                #     # self.sock.send(self.msg.encode())
-                #     writer.write(self.msg.encode())
-                #     await writer.drain()
+                    if ((self.beta == True) & (self.channel == 1)):
+                        # self.bytedic4=self.sock.recv(1024)
+                        # self.bytedic4 = await reader.read(1024)
+                        # self.dic5 = pickle.loads(self.bytedic4)
 
-                # self.beta = False
-                # self.message4='Acknowledge reception of message3, PTK and GTK successfully installed by the supplicant'
-                # # self.sock.send(self.message4.encode())
-                # writer.write(self.message4.encode())
-                # await writer.drain()
-                # print('Four way handshake completed')
-                # print(str(self.beta))
+                        self.GTK = self.dic1.get('gtk')
+                        print('Install PTK and GTK')
+                        print('message3 received')
+                        print('Group Temporal key is:'+self.GTK[0:32].hex())
+
+                        self.textBrowser.append('message3 received')
+                        self.textBrowser.append('Install PTK and GTK')
+                        self.textBrowser.append(f'Group Temporal key is: {self.GTK[0:32].hex()}')
+
+                        self.beta = False
+                        self.message4='Acknowledge reception of message3, PTK and GTK successfully installed by the supplicant'
+                        # self.sock.send(self.message4.encode())
+                        self.dic4 = {'msg_no':4, 'msg':self.message4}
+                        self.message = pickle.dumps(self.dic4)
+                        print(f"final message : {self.message}")
+                        writer.write(self.message)
+                        await writer.drain()
+                        # await asyncio.sleep(3)
+                        print('Four way handshake completed')
+                        self.textBrowser.append('Four way handshake completed')
+
+                    else:
+                        self.msg='message discarded, use the appropriate channel information'
+                        # self.sock.send(self.msg.encode())
+                        self.dic2 = {'msg_no':5, 'msg':self.msg}
+                        self.message = pickle.dumps(self.dic2)
+                        print(f"Error message : {self.message}")
+                        writer.write(self.message)
+                        await writer.drain()
+
+                    
+                    
 
             except Exception as e:
                 print("Exception was raised")
